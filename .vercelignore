@@ -1,0 +1,4 @@
+# Scratch/reference material -- not read by the app at runtime, and large enough
+# (video, .eps vectors) to trip Vercel's upload file-size limit.
+/z_process
+/avatar-test-samples

@@ -24,7 +24,13 @@ export async function POST(request: Request) {
     const result = await fal.subscribe(MODEL, {
       input: {
         prompt: SMILE_PROMPT,
-        image_urls: [selfieUrl, templateUrl],
+        // SMILE_PROMPT defines "Image 1" as the identity-less structural template and
+        // "Image 2" as the sole person reference -- image_urls order IS that numbering, so
+        // template must come first. Getting this backwards (selfie first) means the model
+        // reads the user's own photo as the no-identity structure reference and the blank
+        // gray template as "the person," directly contradicting every instruction in the
+        // prompt -- a likely cause of inconsistent/degraded generation quality.
+        image_urls: [templateUrl, selfieUrl],
         num_images: 4,
         aspect_ratio: "3:4",
         output_format: "png",
