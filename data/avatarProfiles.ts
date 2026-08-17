@@ -52,13 +52,15 @@ export const AVATAR_PROFILES: AvatarProfile[] = [
     armColor: 0x5e7b98, skinColor: 0xe5aa8c, irisColor: 0x4a7ab5,
   },
   {
-    id: "claudia", displayName: "Claudia",
-    smileKey: "avatar-claudia-smile", frownKey: "avatar-claudia-frown",
-    smileSrc: "/avatars/claudia-smile.png", frownSrc: "/avatars/claudia-frown.png",
-    eyeLocal: { left: { x: 145.1, y: 227.4 }, right: { x: 215.6, y: 227.4 } },
-    scleraHeightLocal: 10.0,
-    shoulderLocal: { left: { x: 7.5, y: 469.0 }, right: { x: 352.5, y: 469.0 } },
-    armColor: 0xe1ad87, skinColor: 0xe2ad85, irisColor: 0x4a7ab5,
+    id: "carrie", displayName: "Carrie",
+    smileKey: "avatar-carrie-smile", frownKey: "avatar-carrie-frown",
+    smileSrc: "/avatars/carrie-smile.png", frownSrc: "/avatars/carrie-frown.png",
+    eyeLocal: { left: { x: 145.0, y: 214.4 }, right: { x: 215.5, y: 214.4 } },
+    scleraHeightLocal: 11.11,
+    shoulderLocal: { left: { x: 7.5, y: 458.0 }, right: { x: 353.0, y: 458.0 } },
+    // Auto-detected iris color isn't used here -- confirmed directly: Carrie's eyes are
+    // dark blue.
+    armColor: 0xb7d1ec, skinColor: 0xfcbc99, irisColor: 0x1e3a5f,
   },
   {
     id: "matt", displayName: "Matt",

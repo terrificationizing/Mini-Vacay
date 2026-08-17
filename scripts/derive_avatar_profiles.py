@@ -14,7 +14,7 @@ AVATARS_DIR = os.path.join(REPO, "public", "avatars")
 OUT_PATH = os.path.join(REPO, "data", "avatarProfiles.ts")
 
 # Grid display order (left-to-right, top-to-bottom), per the approved plan.
-NAMES_IN_ORDER = ["traci", "andy", "terri", "gus", "claudia", "matt", "abe", "alysa", "mj"]
+NAMES_IN_ORDER = ["traci", "andy", "terri", "gus", "carrie", "matt", "abe", "alysa", "mj"]
 DISPLAY_NAMES = {n: n.capitalize() if n != "mj" else "MJ" for n in NAMES_IN_ORDER}
 # Traci's iris color isn't auto-detected here (see DEFAULT_IRIS_COLOR below) -- her real
 # eyes are green, hand-set to 0x5c7d4f (Nichole's same green) in data/avatarProfiles.ts.

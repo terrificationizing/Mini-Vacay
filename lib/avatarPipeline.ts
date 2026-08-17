@@ -563,25 +563,6 @@ async function detectEyeGeometry(img: HTMLImageElement): Promise<{ data: Uint8Cl
   }
 }
 
-function sampleAverageColorNear(data: Uint8ClampedArray, width: number, height: number, cx: number, cy: number, halfSize: number): RGB | null {
-  let sumR = 0;
-  let sumG = 0;
-  let sumB = 0;
-  let count = 0;
-  for (let y = cy - halfSize; y <= cy + halfSize; y++) {
-    for (let x = cx - halfSize; x <= cx + halfSize; x++) {
-      if (x < 0 || x >= width || y < 0 || y >= height) continue;
-      const p = (y * width + x) * 4;
-      if (data[p + 3] <= 200) continue;
-      sumR += data[p];
-      sumG += data[p + 1];
-      sumB += data[p + 2];
-      count++;
-    }
-  }
-  return count === 0 ? null : [(sumR / count) | 0, (sumG / count) | 0, (sumB / count) | 0];
-}
-
 /** Confidence level for whether a candidate still shows a visible iris/pupil despite the
  *  prompt's "blank white eyes" requirement -- Nano Banana doesn't follow that instruction
  *  100% of the time across all 4 outputs in a batch, so candidates need to be checked
@@ -626,6 +607,63 @@ export async function checkIrisPresence(img: HTMLImageElement): Promise<IrisChec
   return eyeCenterHasIris(eyes.leftEye) || eyeCenterHasIris(eyes.rightEye) ? "iris" : "clean";
 }
 
+/** A plain small-patch color average is fragile for iris color specifically: a handful of
+ *  bright catchlight/glasses-reflection pixels or a sliver of the near-black pupil can drag
+ *  a MEAN color toward white or gray, which is exactly the failure mode seen on real uploads
+ *  (near-white readings with no visible cause). This scans the eye's own sclera-blob
+ *  bounding box -- which, by
+ *  construction, fully contains the iris since the sclera surrounds it -- discards near-white
+ *  (sclera/catchlight) and near-black (pupil) pixels, then takes the DOMINANT remaining color
+ *  (mode, not mean, same bucket-then-pick-most-common-exact-color approach already used for
+ *  skin tone in sampleDominantColor) -- a few outlier pixels can't drag a mode the way they
+ *  drag an average. */
+function sampleIrisColor(data: Uint8ClampedArray, width: number, height: number, eye: Blob): RGB | null {
+  const x0 = Math.round(eye.cx - eye.w / 2);
+  const x1 = Math.round(eye.cx + eye.w / 2);
+  const y0 = Math.round(eye.cy - eye.h / 2);
+  const y1 = Math.round(eye.cy + eye.h / 2);
+
+  const buckets = new Map<string, { count: number; colors: Map<string, { count: number; rgb: RGB }> }>();
+  for (let y = Math.max(0, y0); y < Math.min(height, y1); y++) {
+    for (let x = Math.max(0, x0); x < Math.min(width, x1); x++) {
+      const p = (y * width + x) * 4;
+      if (data[p + 3] <= 200) continue;
+      const r = data[p];
+      const g = data[p + 1];
+      const b = data[p + 2];
+      const mn = Math.min(r, g, b);
+      const mx = Math.max(r, g, b);
+      if (mn > 195 && mx - mn < 40) continue; // sclera / catchlight
+      if (mx < 55) continue; // pupil
+      const bucketKey = `${(r / SKIN_BUCKET_BIN) | 0},${(g / SKIN_BUCKET_BIN) | 0},${(b / SKIN_BUCKET_BIN) | 0}`;
+      let bucket = buckets.get(bucketKey);
+      if (!bucket) {
+        bucket = { count: 0, colors: new Map() };
+        buckets.set(bucketKey, bucket);
+      }
+      bucket.count++;
+      const colorKey = `${r},${g},${b}`;
+      const existing = bucket.colors.get(colorKey);
+      if (existing) existing.count++;
+      else bucket.colors.set(colorKey, { count: 1, rgb: [r, g, b] });
+    }
+  }
+  let bestBucket: { count: number; colors: Map<string, { count: number; rgb: RGB }> } | null = null;
+  for (const bucket of buckets.values()) {
+    if (!bestBucket || bucket.count > bestBucket.count) bestBucket = bucket;
+  }
+  if (!bestBucket) return null;
+  let bestColor: RGB = [0, 0, 0];
+  let bestCount = -1;
+  for (const c of bestBucket.colors.values()) {
+    if (c.count > bestCount) {
+      bestCount = c.count;
+      bestColor = c.rgb;
+    }
+  }
+  return bestColor;
+}
+
 /** Samples the actual iris/pupil color from the ORIGINAL selfie (a real photo, so its eyes
  *  have a genuine visible iris, unlike the generated avatars which are prompted to have
  *  none) -- this is what determines the color used both for the animated eye-overlay
@@ -636,12 +674,8 @@ export async function detectIrisColor(img: HTMLImageElement): Promise<number | n
   const geo = await detectEyeGeometry(img);
   if (!geo) return null;
   const { data, width, height, eyes } = geo;
-  const sampleEye = (eye: Blob) => {
-    const half = Math.max(2, Math.round(Math.min(eye.w, eye.h) * 0.15));
-    return sampleAverageColorNear(data, width, height, Math.round(eye.cx), Math.round(eye.cy), half);
-  };
-  const left = sampleEye(eyes.leftEye);
-  const right = sampleEye(eyes.rightEye);
+  const left = sampleIrisColor(data, width, height, eyes.leftEye);
+  const right = sampleIrisColor(data, width, height, eyes.rightEye);
   const rgb: RGB | null = left && right ? [((left[0] + right[0]) / 2) | 0, ((left[1] + right[1]) / 2) | 0, ((left[2] + right[2]) / 2) | 0] : left || right;
   return rgb ? rgbToHex(rgb) : null;
 }
