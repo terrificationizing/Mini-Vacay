@@ -15,9 +15,9 @@ body {
 
 body {
   font-family: var(--font-baloo), system-ui, sans-serif;
-  /* Neutral backdrop outside the phone-width column below — only visible when
+  /* Backdrop outside the phone-width column below — only visible when
      testing in a wide desktop window, never seen on an actual mobile device. */
-  background: #1c1520;
+  background: #c82e23;
   color: #4a2038;
   display: flex;
   justify-content: center;
