@@ -61,15 +61,6 @@ export const AVATAR_PROFILES: AvatarProfile[] = [
     armColor: 0xe1ad87, skinColor: 0xe2ad85, irisColor: 0x4a7ab5,
   },
   {
-    id: "abe", displayName: "Abe",
-    smileKey: "avatar-abe-smile", frownKey: "avatar-abe-frown",
-    smileSrc: "/avatars/abe-smile.png", frownSrc: "/avatars/abe-frown.png",
-    eyeLocal: { left: { x: 144.7, y: 213.4 }, right: { x: 215.2, y: 212.7 } },
-    scleraHeightLocal: 10.25,
-    shoulderLocal: { left: { x: 14.5, y: 463.0 }, right: { x: 344.5, y: 463.0 } },
-    armColor: 0x272727, skinColor: 0xf0bda2, irisColor: 0x3f2a17,
-  },
-  {
     id: "matt", displayName: "Matt",
     smileKey: "avatar-matt-smile", frownKey: "avatar-matt-frown",
     smileSrc: "/avatars/matt-smile.png", frownSrc: "/avatars/matt-frown.png",
@@ -77,6 +68,15 @@ export const AVATAR_PROFILES: AvatarProfile[] = [
     scleraHeightLocal: 11.5,
     shoulderLocal: { left: { x: 40.5, y: 480.0 }, right: { x: 319.0, y: 480.0 } },
     armColor: 0xf9ceb5, skinColor: 0xfbcdb5, irisColor: 0x4a7ab5,
+  },
+  {
+    id: "abe", displayName: "Abe",
+    smileKey: "avatar-abe-smile", frownKey: "avatar-abe-frown",
+    smileSrc: "/avatars/abe-smile.png", frownSrc: "/avatars/abe-frown.png",
+    eyeLocal: { left: { x: 144.7, y: 213.4 }, right: { x: 215.2, y: 212.7 } },
+    scleraHeightLocal: 10.25,
+    shoulderLocal: { left: { x: 14.5, y: 463.0 }, right: { x: 344.5, y: 463.0 } },
+    armColor: 0x272727, skinColor: 0xf0bda2, irisColor: 0x3f2a17,
   },
   {
     id: "mj", displayName: "MJ",
@@ -88,12 +88,15 @@ export const AVATAR_PROFILES: AvatarProfile[] = [
     armColor: 0x347d8f, skinColor: 0xa85c35, irisColor: 0x3f2a17,
   },
   {
-    id: "nichole", displayName: "Nichole",
-    smileKey: "avatar-nichole-smile", frownKey: "avatar-nichole-frown",
-    smileSrc: "/avatars/nichole-smile.png", frownSrc: "/avatars/nichole-frown.png",
-    eyeLocal: { left: { x: 145.0, y: 246.3 }, right: { x: 215.3, y: 246.3 } },
-    scleraHeightLocal: 12.5,
-    shoulderLocal: { left: { x: 23.5, y: 467.0 }, right: { x: 336.5, y: 467.0 } },
-    armColor: 0x63a8c1, skinColor: 0xf1c0a2, irisColor: 0x5c7d4f,
+    id: "alysa", displayName: "Alysa",
+    smileKey: "avatar-alysa-smile", frownKey: "avatar-alysa-frown",
+    smileSrc: "/avatars/alysa-smile.png", frownSrc: "/avatars/alysa-frown.png",
+    eyeLocal: { left: { x: 144.7, y: 238.6 }, right: { x: 215.2, y: 238.5 } },
+    scleraHeightLocal: 13.2,
+    shoulderLocal: { left: { x: 24.0, y: 469.0 }, right: { x: 335.5, y: 469.0 } },
+    // Auto-detected iris color came back near-white (0xfefefe -- no glasses this time, but
+    // still not a usable read), so this falls back to the same brown default most other
+    // avatars share, matching derive_avatar_profiles.py's own DEFAULT_IRIS_COLOR.
+    armColor: 0xf0c6ad, skinColor: 0xf2c6ad, irisColor: 0x3f2a17,
   },
 ];

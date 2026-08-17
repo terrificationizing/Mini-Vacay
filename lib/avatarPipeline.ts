@@ -469,7 +469,13 @@ export async function processSmileImage(img: HTMLImageElement, irisColor: number
   maskPureWhiteOutsideZone(srcImageData.data, srcCanvas.width, srcCanvas.height, faceZone);
   srcCtx.putImageData(srcImageData, 0, 0);
 
-  const scaleFactor = REFERENCE_EYE_SPACING / eyes.eyeSpacing;
+  // Reference-eye-spacing scaling assumes a normally-framed headshot; a close-up selfie or
+  // a mis-measured eye spacing (e.g. an iris breaking up the sclera blob into something
+  // smaller than a real sclera) can blow this up enough that the head no longer fits above
+  // the bottom-anchored canvas, cropping the top of the head off. Clamp so the full bbox
+  // height always fits: resizedTop = CANVAS_H - (bbox.bottom - bbox.top) * scaleFactor must
+  // stay >= 0.
+  const scaleFactor = Math.min(REFERENCE_EYE_SPACING / eyes.eyeSpacing, CANVAS_H / (bbox.bottom - bbox.top));
   const newW = Math.max(1, Math.round(srcCanvas.width * scaleFactor));
   const newH = Math.max(1, Math.round(srcCanvas.height * scaleFactor));
   const resizedCx = eyes.eyeCx * scaleFactor;

@@ -29,15 +29,16 @@ function shuffle<T>(items: T[]): T[] {
   return out;
 }
 
-/** Picks 3 of the 4 candidates, prioritizing ones that pass a check for still showing a
- *  visible iris/pupil -- the prompt demands blank white eyes, but Nano Banana doesn't
- *  honor that on every output in a batch (confirmed: real generations have come back with
- *  1 of 4 candidates showing colored irises despite the same prompt). Clean candidates are
- *  shown first; a candidate that couldn't be checked (unusual framing, load error) ranks
- *  above a confirmed-iris one but below a confirmed-clean one, since it's not confirmed
- *  bad, just unconfirmed. Only falls back to iris-flagged candidates if fewer than 3 clean/
- *  unknown ones exist, so a genuinely bad batch still shows *something* rather than nothing. */
-async function rankAndPickThree(urls: string[]): Promise<string[]> {
+/** Hard filter, not a ranking: candidates that still show a visible iris/pupil (the prompt
+ *  demands blank white eyes, but Nano Banana doesn't honor that on every output in a batch)
+ *  are NEVER shown to the user -- an iris slipping through here doesn't just look wrong, it
+ *  also throws off the in-game scale/placement math downstream (eye-spacing detection reads
+ *  the iris as breaking up the sclera blob, which can push the whole avatar's head off the
+ *  top of the canvas). A candidate that couldn't be checked at all (unusual framing, load
+ *  error) is treated as unconfirmed-bad, not confirmed-clean, and is dropped too -- only
+ *  candidates that positively passed the check are eligible. Returns at most 3, at least 2
+ *  or none (caller decides what "none" means for the UI). */
+async function filterCleanCandidates(urls: string[]): Promise<string[]> {
   const checked = await Promise.all(
     urls.map(async (url) => {
       try {
@@ -49,9 +50,8 @@ async function rankAndPickThree(urls: string[]): Promise<string[]> {
     })
   );
   const clean = shuffle(checked.filter((c) => c.check === "clean").map((c) => c.url));
-  const unknown = shuffle(checked.filter((c) => c.check === "unknown").map((c) => c.url));
-  const iris = shuffle(checked.filter((c) => c.check === "iris").map((c) => c.url));
-  return [...clean, ...unknown, ...iris].slice(0, 3);
+  if (clean.length < 2) return [];
+  return clean.slice(0, 3);
 }
 
 export default function AvatarGeneratingScreen({
@@ -63,7 +63,7 @@ export default function AvatarGeneratingScreen({
   onCandidates: (urls: string[], irisColor: number | null) => void;
   onBack: () => void;
 }) {
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<"generation" | "no-clean-candidates" | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -82,10 +82,14 @@ export default function AvatarGeneratingScreen({
         if (!res.ok) throw new Error("generation failed");
         const data = await res.json();
         if (!Array.isArray(data.images) || data.images.length === 0) throw new Error("no images returned");
-        const [ranked, irisColor] = await Promise.all([rankAndPickThree(data.images), irisColorPromise]);
-        onCandidates(ranked, irisColor);
+        const [clean, irisColor] = await Promise.all([filterCleanCandidates(data.images), irisColorPromise]);
+        if (clean.length === 0) {
+          setError("no-clean-candidates");
+          return;
+        }
+        onCandidates(clean, irisColor);
       } catch {
-        setError(true);
+        setError("generation");
       }
     })();
   }, [photoDataUrl, onCandidates]);
@@ -106,7 +110,9 @@ export default function AvatarGeneratingScreen({
         {error ? (
           <>
             <p style={{ fontFamily: "var(--font-baloo)", fontWeight: 700, color: "#ffffff", fontSize: 16, margin: "0 0 18px" }}>
-              Hmm, that didn&apos;t work. Let&apos;s try again.
+              {error === "no-clean-candidates"
+                ? "We couldn't get a clean result from that photo. Try a clearer, well-lit photo facing the camera."
+                : "Hmm, that didn't work. Let's try again."}
             </p>
             <button
               onClick={onBack}

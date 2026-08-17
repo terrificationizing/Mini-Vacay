@@ -74,8 +74,6 @@ export default function AvatarPreparingScreen({
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 15, overflow: "hidden", pointerEvents: "none" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/pool.png" alt="" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "auto", display: "block" }} />
       <div
         style={{
           width: 220,

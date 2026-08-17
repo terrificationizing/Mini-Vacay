@@ -239,6 +239,14 @@ export default function GameRoot() {
       // this is the primary "start playing" path (tapping an avatar grid slot), so it's the
       // one most likely to be a player's very first music-start attempt of the session.
       musicEngine.start();
+      // Registered BEFORE emitting "setAvatar", not after -- for a preloaded avatar,
+      // MainScene's handler applies the profile and emits "avatar-ready" synchronously
+      // inside this same emit() call. Waiting until after emit() to call
+      // waitForAvatarReady() would register the listener too late to ever see that
+      // synchronous event, leaving this promise permanently unresolved (the generated-
+      // avatar path has a real async gap before its own "avatar-ready", so it was never
+      // affected by this ordering).
+      const avatarReadyPromise = waitForAvatarReady();
       gameCommands.emit("setAvatar", source);
       if (source.kind === "preloaded") {
         const profile = AVATAR_PROFILES.find((p) => p.id === source.id);
@@ -252,7 +260,7 @@ export default function GameRoot() {
       // Run concurrently -- resolveControlMode() and the avatar's own texture load are
       // unrelated, so there's no need to serialize them just because both must finish
       // before revealAvatar can safely fire.
-      const [mode] = await Promise.all([resolveControlMode(), waitForAvatarReady()]);
+      const [mode] = await Promise.all([resolveControlMode(), avatarReadyPromise]);
       gameCommands.emit("revealAvatar", { controlMode: mode });
       beginSpawningOrShowTip(mode);
     },
