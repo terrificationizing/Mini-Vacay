@@ -114,36 +114,54 @@ export default function GameOverScreen({
       }}
     >
       <div className="tripInterruptedScroll" style={cardStyle}>
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            overflow: "hidden",
-            border: "4px solid #ff6f91",
-            margin: "0 auto 8px",
-            background: "#ffe1ea",
-          }}
-        >
-          {avatarFrownSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarFrownSrc}
-              alt=""
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: `center ${objectPositionY}%`,
-                transform: `scale(${AVATAR_CIRCLE_SCALE})`,
-                transformOrigin: "50% 0%",
-              }}
-            />
-          ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
-              🏖️
-            </div>
-          )}
+        <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 8px" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/circleplants.svg"
+            alt=""
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: 150,
+              height: "auto",
+              transform: "translate(-50%, -50%)",
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              overflow: "hidden",
+              border: "4px solid #ff6f91",
+              background: "#ffe1ea",
+            }}
+          >
+            {avatarFrownSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarFrownSrc}
+                alt=""
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: `center ${objectPositionY}%`,
+                  transform: `scale(${AVATAR_CIRCLE_SCALE})`,
+                  transformOrigin: "50% 0%",
+                }}
+              />
+            ) : (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
+                🏖️
+              </div>
+            )}
+          </div>
         </div>
         <h2 style={{ fontFamily: "var(--font-baloo)", fontWeight: 800, color: "#ff6f91", fontSize: 26, margin: "6px 0 2px" }}>
           Trip Interrupted :/
