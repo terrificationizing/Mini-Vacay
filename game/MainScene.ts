@@ -380,10 +380,15 @@ export class MainScene extends Phaser.Scene {
         if (source.kind === "preloaded") {
           const profile = AVATAR_PROFILES.find((p) => p.id === source.id) ?? AVATAR_PROFILES[0];
           this.applyAvatarProfile(profile);
+          gameEvents.emit("avatar-ready", undefined);
           return;
         }
         // Generated avatar: add its two textures first (async), then apply -- geometry
         // comes straight from the caller (lib/avatarPipeline.ts's output), no lookup needed.
+        // "avatar-ready" only fires here, once applyAvatarProfile has actually run -- a
+        // caller emitting "revealAvatar" right after "setAvatar" (same tick) would
+        // otherwise call prepareCharacter() against the STILL-PREVIOUS avatarProfile,
+        // since that promise hasn't resolved yet at that point.
         this.loadGeneratedAvatarTextures(source.id, source.smileDataUrl, source.frownDataUrl).then(({ smileKey, frownKey }) => {
           this.applyAvatarProfile({
             id: source.id,
@@ -394,6 +399,7 @@ export class MainScene extends Phaser.Scene {
             frownSrc: "",
             ...source.geometry,
           });
+          gameEvents.emit("avatar-ready", undefined);
         });
       }),
       // Shows the character/suitcase (HUD chrome, 0/0 counters) and applies the given

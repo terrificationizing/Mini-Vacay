@@ -108,9 +108,9 @@ export default function Background() {
         alt=""
         style={{
           position: "absolute",
-          left: "-5%",
+          left: "-2%",
           top: 0,
-          width: "50%",
+          width: "60%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "right center",
@@ -126,9 +126,9 @@ export default function Background() {
         alt=""
         style={{
           position: "absolute",
-          right: "-5%",
+          right: "-2%",
           top: 0,
-          width: "50%",
+          width: "60%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "left center",

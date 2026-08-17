@@ -180,6 +180,24 @@ export default function GameRoot() {
     return mode;
   }, [controlMode, ensureTiltListener]);
 
+  // A "setAvatar" command's own promise (real for a generated avatar's async texture
+  // load, instant for a preloaded one) isn't observable from here -- MainScene emits
+  // "avatar-ready" once it's actually finished applying. Without awaiting this,
+  // "revealAvatar" emitted right after "setAvatar" could call prepareCharacter() against
+  // the avatar that was showing BEFORE this pick, since only the emission order (not
+  // completion) was ever guaranteed -- this is what caused a freshly-generated avatar to
+  // render with no irises until the next mood-swap (frown/smile) forced a re-apply.
+  const waitForAvatarReady = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const off = gameEvents.on("avatar-ready", () => {
+          off();
+          resolve();
+        });
+      }),
+    []
+  );
+
   // Starts item spawning immediately, unless this is the session's first tilt-mode play --
   // then it shows the one-time "tilt your head" tip instead, and spawning waits for its
   // dismissal (see TiltTip's onDismiss below).
@@ -234,11 +252,14 @@ export default function GameRoot() {
         setCurrentAvatarEyeYPct(eyeYPctFromLocal(source.geometry.eyeLocal.left.y));
       }
       setAvatarFlow("closed");
-      const mode = await resolveControlMode();
+      // Run concurrently -- resolveControlMode() and the avatar's own texture load are
+      // unrelated, so there's no need to serialize them just because both must finish
+      // before revealAvatar can safely fire.
+      const [mode] = await Promise.all([resolveControlMode(), waitForAvatarReady()]);
       gameCommands.emit("revealAvatar", { controlMode: mode });
       beginSpawningOrShowTip(mode);
     },
-    [resolveControlMode, beginSpawningOrShowTip]
+    [resolveControlMode, waitForAvatarReady, beginSpawningOrShowTip]
   );
 
   const handleUsePreloaded = useCallback((id: string) => pickAvatarAndPlay({ kind: "preloaded", id }), [pickAvatarAndPlay]);
@@ -280,13 +301,13 @@ export default function GameRoot() {
       });
       setCurrentAvatarFrownSrc(entry.frownDataUrl);
       setCurrentAvatarEyeYPct(eyeYPctFromLocal(entry.geometry.eyeLocal.left.y));
-      const mode = await resolveControlMode();
+      const [mode] = await Promise.all([resolveControlMode(), waitForAvatarReady()]);
       pendingControlModeRef.current = mode;
       musicEngine.start();
       gameCommands.emit("revealAvatar", { controlMode: mode });
       setAvatarFlow("flourish");
     },
-    [resolveControlMode]
+    [resolveControlMode, waitForAvatarReady]
   );
 
   const handlePreparingError = useCallback(() => {

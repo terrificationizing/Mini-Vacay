@@ -31,6 +31,15 @@ export type GameEvents = {
    * Preparing screen's shimmer placeholder) line up with exactly where the real avatar
    * will appear, instead of an approximated fixed position. */
   "avatar-rect": { xPct: number; yPct: number; widthPct: number; heightPct: number };
+  /** Fires once a "setAvatar" command has actually finished applying -- for a generated
+   * avatar this means its textures (loaded async via addBase64) are in and
+   * applyAvatarProfile has run, not just that the command was emitted. "setAvatar" ->
+   * "revealAvatar" being emitted back-to-back only guarantees ORDER, not that the first
+   * has finished by the time the second runs (a real gap for the async generated path,
+   * a non-issue for the synchronous preloaded path) -- callers that need the avatar to
+   * actually be showing before revealing the character should await this instead of
+   * assuming emission order alone is enough. */
+  "avatar-ready": undefined;
 };
 
 export const gameEvents = new EventBus<GameEvents>();

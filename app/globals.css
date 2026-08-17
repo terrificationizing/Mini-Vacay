@@ -351,3 +351,25 @@ main {
     scale: 1.18;
   }
 }
+
+/* Trip Interrupted card's own scrollbar (only rendered by the browser at all when its
+   content actually overflows -- overflow-y: auto already handles the "no scrolling
+   needed -> no scrollbar" half of this on its own) -- themed teal instead of each
+   browser's generic default, since the card sits on a white background where a plain
+   grey scrollbar would look out of place. Pseudo-elements aren't reachable from inline
+   styles, hence a real class here instead. */
+.tripInterruptedScroll {
+  scrollbar-width: thin;
+  scrollbar-color: #57beab #eefbf8;
+}
+.tripInterruptedScroll::-webkit-scrollbar {
+  width: 8px;
+}
+.tripInterruptedScroll::-webkit-scrollbar-track {
+  background: #eefbf8;
+  border-radius: 999px;
+}
+.tripInterruptedScroll::-webkit-scrollbar-thumb {
+  background: #57beab;
+  border-radius: 999px;
+}

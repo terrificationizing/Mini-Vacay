@@ -16,7 +16,14 @@ const REFERENCE_EYE_SPACING = 430.4103079376872 - 289.49388599449946;
 
 type RGB = [number, number, number];
 
-type Placement = { scaleFactor: number; offsetX: number; offsetY: number };
+/** A rectangle (in the SOURCE photo's own pixel coordinates) around the eyes/nose/mouth
+ *  that the aggressive outside-the-face pure-white mask (see maskPureWhiteOutsideZone)
+ *  must never touch -- generous enough to fully cover the sclera and, in a smiling photo,
+ *  visible teeth, both of which are legitimately pure white and would otherwise get
+ *  stripped out along with real hair-fringing artifacts. */
+type FaceZone = { cx: number; cy: number; halfWidth: number; halfHeight: number };
+
+type Placement = { scaleFactor: number; offsetX: number; offsetY: number; faceZone: FaceZone };
 
 export type ProcessedSmileResult = {
   geometry: AvatarGeometry;
@@ -312,6 +319,46 @@ function detectEyesAndSkin(data: Uint8ClampedArray, width: number, bbox: AlphaBB
   return { leftEye, rightEye, eyeSpacing, eyeCx, eyeCy, eyeScleraH, skinRgb };
 }
 
+/** Sized off eyeSpacing (the one head-scale-independent measurement already on hand) so it
+ *  covers the same relative amount of face on any photo regardless of how zoomed-in it is.
+ *  Shifted down from the eye midpoint since a face has much more room below the eyes (nose,
+ *  mouth, chin) than above them (just the brow/hairline). Deliberately generous on all
+ *  sides -- better to leave a few real fringing pixels near the jaw/temple untouched than
+ *  to risk clipping into the mouth/teeth or sclera. */
+function computeFaceZone(eyes: EyeDetection): FaceZone {
+  return {
+    cx: eyes.eyeCx,
+    cy: eyes.eyeCy + eyes.eyeSpacing * 0.4,
+    halfWidth: eyes.eyeSpacing * 1.15,
+    halfHeight: eyes.eyeSpacing * 1.9,
+  };
+}
+
+/** maskConnectedPureWhite only ever removes white that's connected to the already-cleared
+ *  background, which by construction can't reach a white pocket fully enclosed between
+ *  curls/strands of hair -- exactly the kind of leftover fringing that rule was meant to
+ *  catch but structurally can't. This is the more aggressive follow-up: strip every EXACT
+ *  pure-white (255,255,255, no tolerance) pixel in the whole opaque image, connected or
+ *  not, except within `zone` (the face -- see computeFaceZone), which is the only place
+ *  pure white is ever legitimate content (sclera, teeth) rather than a compositing
+ *  artifact. */
+function maskPureWhiteOutsideZone(data: Uint8ClampedArray, width: number, height: number, zone: FaceZone) {
+  const left = zone.cx - zone.halfWidth;
+  const right = zone.cx + zone.halfWidth;
+  const top = zone.cy - zone.halfHeight;
+  const bottom = zone.cy + zone.halfHeight;
+  for (let y = 0; y < height; y++) {
+    const inZoneRow = y >= top && y <= bottom;
+    for (let x = 0; x < width; x++) {
+      if (inZoneRow && x >= left && x <= right) continue;
+      const p = (y * width + x) * 4;
+      if (data[p + 3] !== 0 && data[p] === 255 && data[p + 1] === 255 && data[p + 2] === 255) {
+        data[p + 3] = 0;
+      }
+    }
+  }
+}
+
 type ShoulderRow = { y: number; left: number; right: number };
 
 /** The shoulder is the single widest row of the avatar's own silhouette, full stop --
@@ -412,6 +459,13 @@ export async function processSmileImage(img: HTMLImageElement, irisColor: number
   const bbox = computeAlphaBBox(srcImageData.data, srcCanvas.width, srcCanvas.height);
   const eyes = detectEyesAndSkin(srcImageData.data, srcCanvas.width, bbox);
 
+  // Only knowable once the face is located -- run after detection, then re-flush to the
+  // canvas since floodRemoveBackground/maskConnectedPureWhite's own putImageData already
+  // happened before this point.
+  const faceZone = computeFaceZone(eyes);
+  maskPureWhiteOutsideZone(srcImageData.data, srcCanvas.width, srcCanvas.height, faceZone);
+  srcCtx.putImageData(srcImageData, 0, 0);
+
   const scaleFactor = REFERENCE_EYE_SPACING / eyes.eyeSpacing;
   const newW = Math.max(1, Math.round(srcCanvas.width * scaleFactor));
   const newH = Math.max(1, Math.round(srcCanvas.height * scaleFactor));
@@ -454,7 +508,7 @@ export async function processSmileImage(img: HTMLImageElement, irisColor: number
   return {
     geometry,
     pngDataUrl: outCanvas.toDataURL("image/png"),
-    placement: { scaleFactor, offsetX, offsetY },
+    placement: { scaleFactor, offsetX, offsetY, faceZone },
   };
 }
 
@@ -467,6 +521,10 @@ export async function processFrownImage(img: HTMLImageElement, placement: Placem
   const srcImageData = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
   floodRemoveBackground(srcImageData.data, srcCanvas.width, srcCanvas.height, 10);
   maskConnectedPureWhite(srcImageData.data, srcCanvas.width, srcCanvas.height);
+  // Reuses the smile pass's own face zone rather than detecting fresh -- the frown photo
+  // has nothing left to detect (eyes are closed), but it's generated from/aligned with the
+  // exact same framing as the smile photo, so that zone still lands in the right place.
+  maskPureWhiteOutsideZone(srcImageData.data, srcCanvas.width, srcCanvas.height, placement.faceZone);
   srcCtx.putImageData(srcImageData, 0, 0);
 
   const newW = Math.max(1, Math.round(srcCanvas.width * placement.scaleFactor));

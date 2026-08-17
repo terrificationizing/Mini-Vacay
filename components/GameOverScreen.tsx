@@ -113,7 +113,7 @@ export default function GameOverScreen({
         background: "rgba(238, 60, 108, 0.35)",
       }}
     >
-      <div style={cardStyle}>
+      <div className="tripInterruptedScroll" style={cardStyle}>
         <div
           style={{
             width: 72,
