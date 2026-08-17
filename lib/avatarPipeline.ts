@@ -291,19 +291,6 @@ function detectEyesAndSkin(data: Uint8ClampedArray, width: number, bbox: AlphaBB
     for (let j = i + 1; j < candidates.length; j++) {
       const a = candidates[i];
       const b = candidates[j];
-      // Plausibility gates, not just a best-score pick -- when eyes are actually closed
-      // (no real sclera blob exists anywhere), the "best" scoring pair among whatever near-
-      // white blobs ARE present (clothing patterns, highlights, teeth) can otherwise still
-      // win by default, silently mistaking e.g. a checkered scarf for eyes instead of
-      // correctly finding nothing. A real open-eye pair is two similarly-sized, level,
-      // elongated-ellipse blobs -- reject anything that doesn't look like that shape at all.
-      const sizeRatio = Math.max(a.size, b.size) / Math.min(a.size, b.size);
-      if (sizeRatio > 2.5) continue;
-      const aspectA = a.w / a.h;
-      const aspectB = b.w / b.h;
-      if (aspectA < 1.3 || aspectA > 5 || aspectB < 1.3 || aspectB > 5) continue;
-      const cxSpacing = Math.abs(a.cx - b.cx);
-      if (cxSpacing < 1 || Math.abs(a.cy - b.cy) > cxSpacing * 0.35) continue;
       const score = Math.abs(a.size - b.size) + Math.abs(a.cy - b.cy) * 5;
       if (score < bestScore) {
         bestScore = score;
