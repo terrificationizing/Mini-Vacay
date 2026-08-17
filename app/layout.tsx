@@ -10,7 +10,7 @@ const baloo = Baloo_2({
 
 export const metadata: Metadata = {
   title: "Mini Vacay",
-  description: "Catch your vacation essentials — a Mini Starburst mini-game",
+  description: "A sweet getaway made just for you!",
 };
 
 export const viewport: Viewport = {
