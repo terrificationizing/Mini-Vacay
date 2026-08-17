@@ -81,6 +81,24 @@ export default function AvatarSelectionScreen({
     >
       <div style={{ position: "relative", width: "min(320px, 88vw)" }}>
         <div style={cardStyle}>
+        <button
+          onClick={onTryAgain}
+          style={{
+            position: "absolute",
+            top: 14,
+            left: 16,
+            fontFamily: "var(--font-baloo)",
+            fontWeight: 700,
+            fontSize: 14,
+            color: "#ffffff",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          ← Back
+        </button>
         <h2 style={{ fontFamily: "var(--font-baloo)", fontWeight: 800, color: "#ffffff", fontSize: 18, margin: "2px 0 10px" }}>
           Choose your Mini!
         </h2>

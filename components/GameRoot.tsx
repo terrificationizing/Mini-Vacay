@@ -477,7 +477,18 @@ export default function GameRoot() {
             setDetectedIrisColor(irisColor);
             setAvatarFlow("selecting");
           }}
-          onBack={() => setAvatarFlow("photoSelect")}
+          onBack={() => {
+            // Unlike AvatarSelectionScreen's TRY AGAIN (which intentionally keeps the
+            // original photo so a fresh generation can be requeued without recapturing),
+            // this Back is reached when the photo itself failed to produce usable
+            // candidates (generation error, or no clean-eyes candidates) -- retrying the
+            // exact same photo would very likely fail the same way. Clear it so
+            // PhotoSelectScreen shows the full picker (camera/upload/grid) again instead
+            // of looping back to a "your photo -> Make a Mini Me!" view for a photo that
+            // just didn't work.
+            setCapturedPhoto(null);
+            setAvatarFlow("photoSelect");
+          }}
         />
       )}
       {uiState === "start" && avatarFlow === "selecting" && (
