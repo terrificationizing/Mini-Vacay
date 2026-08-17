@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { SMILE_PROMPT } from "@/lib/avatarPrompts";
 
-const MODEL = "fal-ai/gemini-25-flash-image/edit";
+const MODEL = "fal-ai/gemini-3-pro-image-preview/edit";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
         num_images: 4,
         aspect_ratio: "3:4",
         output_format: "png",
+        resolution: "1K",
       },
       logs: true,
     });
