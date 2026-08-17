@@ -36,8 +36,10 @@ export default function TiltTip({ onDismiss }: { onDismiss: () => void }) {
         >
           ×
         </button>
-        <p style={{ fontFamily: "var(--font-baloo)", fontWeight: 700, color: "#ffffff", fontSize: 15, margin: 0, textAlign: "center" }}>
-          Tilt your head to move the suitcase!
+        <p style={{ fontFamily: "var(--font-baloo)", fontWeight: 700, color: "#ffffff", fontSize: 15, margin: 0, textAlign: "center", lineHeight: 1.05 }}>
+          Tilt your head
+          <br />
+          to move the suitcase!
         </p>
       </div>
     </div>

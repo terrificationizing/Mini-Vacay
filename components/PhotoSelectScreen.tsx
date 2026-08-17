@@ -155,12 +155,37 @@ export default function PhotoSelectScreen({
   const [previewing, setPreviewing] = useState<CreatedAvatarEntry | null>(null);
   const [nameDraft, setNameDraft] = useState("");
   const [slotVisuals, setSlotVisuals] = useState<Record<string, SlotVisual>>({});
+  const [previewEyeInfo, setPreviewEyeInfo] = useState<EyeOverlayInfo | null>(null);
   const canRename = previewing !== null && nameDraft.trim() !== "" && nameDraft !== (previewing.name ?? "");
 
   const openPreview = (entry: CreatedAvatarEntry) => {
     setPreviewing(entry);
     setNameDraft(entry.name ?? "");
+    // Cleared (not left stale) so a moment's flash doesn't show the PREVIOUS avatar's iris
+    // position on the new one while this one's own eyes are still being detected.
+    setPreviewEyeInfo(null);
   };
+
+  // The preview image (unlike the grid thumbnails) uses a plain centered crop with no
+  // eye-line calibration -- objectPositionY 50 here matches that default `object-position:
+  // 50% 50%` exactly, so the iris overlay lands on the actual rendered eyes.
+  useEffect(() => {
+    if (!previewing) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const img = await loadImage(previewing.smileDataUrl);
+        const raw = await detectEyeOverlayInfo(img);
+        if (!raw || cancelled) return;
+        setPreviewEyeInfo(toContainerEyeInfo(raw, 50));
+      } catch {
+        // leave unset -- preview just shows without irises, same as before this fix
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [previewing]);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,7 +265,7 @@ export default function PhotoSelectScreen({
             </button>
             <button
               onClick={onDiscardPhoto}
-              style={{ ...buttonStyle, fontSize: 13, padding: "8px 20px", background: "#ffe1ea", color: "#b6567a" }}
+              style={{ ...buttonStyle, fontSize: 13, padding: "8px 20px", background: "none", color: "#ffffff" }}
             >
               ← Back
             </button>
@@ -299,12 +324,25 @@ export default function PhotoSelectScreen({
           }}
         >
           <div style={{ ...cardStyle, width: "min(280px, 80vw)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewing.smileDataUrl}
-              alt="Your Mini Me"
-              style={{ width: 180, height: 180, objectFit: "cover", borderRadius: 20, border: "4px solid #ffffff", margin: "0 auto 16px" }}
-            />
+            <div
+              style={{
+                position: "relative",
+                width: 180,
+                height: 180,
+                margin: "0 auto 16px",
+                borderRadius: 20,
+                overflow: "hidden",
+                border: "4px solid #ffffff",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewing.smileDataUrl}
+                alt="Your Mini Me"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              {previewEyeInfo && <EyeOverlay info={previewEyeInfo} irisColor={previewing.geometry.irisColor} />}
+            </div>
             <div style={{ position: "relative", marginBottom: 14 }}>
               <input
                 type="text"

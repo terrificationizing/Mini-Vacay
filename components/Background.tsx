@@ -100,16 +100,17 @@ export default function Background() {
           translateX(42%) self-width-relative offset (see plantSwayLeft/Right in
           globals.css) deep into the middle of the screen instead of staying near the
           edge. A stable width percentage keeps the bleed-off-screen amount consistent
-          across device sizes. */}
+          across device sizes -- only a small sliver bleeds off now (down from -15%),
+          since a bigger bleed read as barely visible at all in the frame. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/plants.svg"
         alt=""
         style={{
           position: "absolute",
-          left: "-15%",
+          left: "-5%",
           top: 0,
-          width: "45%",
+          width: "50%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "right center",
@@ -125,9 +126,9 @@ export default function Background() {
         alt=""
         style={{
           position: "absolute",
-          right: "-15%",
+          right: "-5%",
           top: 0,
-          width: "45%",
+          width: "50%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "left center",

@@ -193,15 +193,9 @@ export default function GameOverScreen({
               color: "#8a3a10",
               boxShadow: "0 5px 0 #c06a1e",
               marginTop: 3,
-              // Longer than "Repack Suitcase" was -- shrunk and allowed to wrap so it still
-              // fits the narrow pill width instead of overflowing.
-              fontSize: 15,
-              whiteSpace: "normal",
-              lineHeight: 1.15,
-              padding: "11px 18px",
             }}
           >
-            Play Again With My Mini Me
+            Play Again
           </button>
           <button onClick={onStartOver} style={{ ...pillButtonStyle, background: "linear-gradient(160deg, #ff8fb3, #ff6f91)", color: "#7a1f3a", boxShadow: "0 5px 0 #c23a5c" }}>
             Start Over

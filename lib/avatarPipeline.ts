@@ -81,6 +81,53 @@ function floodRemoveBackground(data: Uint8ClampedArray, width: number, height: n
   }
 }
 
+/** After floodRemoveBackground clears the connected background, some generated avatars
+ *  still have residual pure-white fringing right at the edge of the hair silhouette
+ *  (compositing artifacts from the original background removal that the tolerance-based
+ *  pass didn't fully catch). This extends the transparency through any EXACTLY pure-white
+ *  (255,255,255, no tolerance) pixel connected to the already-transparent region -- same
+ *  border-BFS shape as floodRemoveBackground, just seeded from the transparent/opaque
+ *  boundary instead of the image edge. Exact-match-only and connectivity-only (never a
+ *  blanket "remove all white pixels" pass) means it can't reach interior pure-white
+ *  features like the eyes' own blank sclera or teeth, since neither touches the
+ *  already-transparent background. */
+function maskConnectedPureWhite(data: Uint8ClampedArray, width: number, height: number) {
+  const n = width * height;
+  const visited = new Uint8Array(n);
+  const queue = new Int32Array(n);
+  let head = 0;
+  let tail = 0;
+  const isPureWhite = (idx: number) => {
+    const p = idx * 4;
+    return data[p + 3] !== 0 && data[p] === 255 && data[p + 1] === 255 && data[p + 2] === 255;
+  };
+  const tryPush = (idx: number) => {
+    if (!visited[idx] && isPureWhite(idx)) {
+      visited[idx] = 1;
+      queue[tail++] = idx;
+    }
+  };
+  for (let idx = 0; idx < n; idx++) {
+    if (data[idx * 4 + 3] !== 0) continue;
+    const x = idx % width;
+    const y = (idx / width) | 0;
+    if (x + 1 < width) tryPush(idx + 1);
+    if (x - 1 >= 0) tryPush(idx - 1);
+    if (y + 1 < height) tryPush(idx + width);
+    if (y - 1 >= 0) tryPush(idx - width);
+  }
+  while (head < tail) {
+    const idx = queue[head++];
+    data[idx * 4 + 3] = 0;
+    const x = idx % width;
+    const y = (idx / width) | 0;
+    if (x + 1 < width) tryPush(idx + 1);
+    if (x - 1 >= 0) tryPush(idx - 1);
+    if (y + 1 < height) tryPush(idx + width);
+    if (y - 1 >= 0) tryPush(idx - width);
+  }
+}
+
 type AlphaBBox = { left: number; top: number; right: number; bottom: number };
 
 /** Exclusive right/bottom, matching PIL's getbbox() convention (one past the last
@@ -359,6 +406,7 @@ export async function processSmileImage(img: HTMLImageElement, irisColor: number
   srcCtx.drawImage(img, 0, 0);
   const srcImageData = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
   floodRemoveBackground(srcImageData.data, srcCanvas.width, srcCanvas.height, 10);
+  maskConnectedPureWhite(srcImageData.data, srcCanvas.width, srcCanvas.height);
   srcCtx.putImageData(srcImageData, 0, 0);
 
   const bbox = computeAlphaBBox(srcImageData.data, srcCanvas.width, srcCanvas.height);
@@ -418,6 +466,7 @@ export async function processFrownImage(img: HTMLImageElement, placement: Placem
   srcCtx.drawImage(img, 0, 0);
   const srcImageData = srcCtx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
   floodRemoveBackground(srcImageData.data, srcCanvas.width, srcCanvas.height, 10);
+  maskConnectedPureWhite(srcImageData.data, srcCanvas.width, srcCanvas.height);
   srcCtx.putImageData(srcImageData, 0, 0);
 
   const newW = Math.max(1, Math.round(srcCanvas.width * placement.scaleFactor));
