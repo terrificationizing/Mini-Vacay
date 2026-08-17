@@ -100,17 +100,27 @@ export default function Background() {
           translateX(42%) self-width-relative offset (see plantSwayLeft/Right in
           globals.css) deep into the middle of the screen instead of staying near the
           edge. A stable width percentage keeps the bleed-off-screen amount consistent
-          across device sizes -- only a small sliver bleeds off now (down from -15%),
-          since a bigger bleed read as barely visible at all in the frame. */}
+          across device sizes.
+
+          The box is wider than what's actually visible at rest (30 extra points of width,
+          all added on the OUTER/off-screen side, with the offset pushed out to match --
+          the INNER edge position, and so everything actually visible, is unchanged). The
+          sway/dance animations rotate around the bottom-center pivot, and since the box
+          spans the full frame height, even a few degrees of rotation swings the far
+          (outer) edge sideways by a lot more than the frame's own width -- with only a
+          couple percent of buffer there, that swing used to bring the box's own straight
+          object-fit:cover edge into view mid-sway, reading as a hard rectangular cutoff
+          instead of the plant's own leafy silhouette. The extra width gives that swing
+          room to stay off-screen at every rotation angle in the sway/dance range. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/plants.svg"
         alt=""
         style={{
           position: "absolute",
-          left: "-2%",
+          left: "-32%",
           top: 0,
-          width: "60%",
+          width: "90%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "right center",
@@ -126,9 +136,9 @@ export default function Background() {
         alt=""
         style={{
           position: "absolute",
-          right: "-2%",
+          right: "-32%",
           top: 0,
-          width: "60%",
+          width: "90%",
           height: "100%",
           objectFit: "cover",
           objectPosition: "left center",

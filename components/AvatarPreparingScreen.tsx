@@ -9,7 +9,6 @@ const DEFAULT_IRIS_COLOR = 0x3f2a17;
 export default function AvatarPreparingScreen({
   smileImageUrl,
   irisColor,
-  avatarRect,
   onReady,
   onError,
 }: {
@@ -17,10 +16,6 @@ export default function AvatarPreparingScreen({
   /** Detected from the user's own original photo (see lib/avatarPipeline.ts's
    *  detectIrisColor) -- falls back to the shared default when detection fails. */
   irisColor: number | null;
-  /** The real avatar's current on-screen rect (see MainScene's emitAvatarRect), as
-   *  viewport percentages -- lets the shimmer placeholder occupy exactly where the real
-   *  avatar will appear instead of an approximated centered position. */
-  avatarRect: { xPct: number; yPct: number; widthPct: number; heightPct: number } | null;
   onReady: (entry: CreatedAvatarEntry) => void;
   onError: () => void;
 }) {
@@ -77,33 +72,18 @@ export default function AvatarPreparingScreen({
 
   if (failed) return null;
 
-  // Percentages, not vw/vh -- this component is rendered as a sibling of <PhaserGame/>
-  // inside the exact same wrapper element the canvas itself is sized to fill (see
-  // GameRoot.tsx), so a plain % here resolves against that same box Phaser's own
-  // this.scale.width/height already matches, with no separate DOM measurement involved.
-  const boxStyle: React.CSSProperties = avatarRect
-    ? {
-        position: "absolute",
-        left: `${avatarRect.xPct}%`,
-        top: `${avatarRect.yPct}%`,
-        width: `${avatarRect.widthPct}%`,
-        height: `${avatarRect.heightPct}%`,
-      }
-    : {
-        // Only used for the brief window before the first avatar-rect event arrives.
-        position: "absolute",
-        left: "50%",
-        top: "50%",
-        width: 220,
-        aspectRatio: "480 / 675",
-        transform: "translate(-50%, -50%)",
-      };
-
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 15, pointerEvents: "none" }}>
+    <div style={{ position: "absolute", inset: 0, zIndex: 15, overflow: "hidden", pointerEvents: "none" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/pool.png" alt="" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: "auto", display: "block" }} />
       <div
         style={{
-          ...boxStyle,
+          width: 220,
+          aspectRatio: "480 / 675",
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
           WebkitMaskImage: "url(/avatars/template-silhouette.png)",
           maskImage: "url(/avatars/template-silhouette.png)",
           WebkitMaskSize: "contain",
@@ -118,6 +98,41 @@ export default function AvatarPreparingScreen({
           opacity: 0.85,
         }}
       />
+      {/* Layered directly over the avatar (same centered spot, later in DOM so it sits on
+          top) rather than below it. */}
+      <p
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          fontFamily: "var(--font-baloo)",
+          fontWeight: 800,
+          fontSize: 34,
+          lineHeight: 0.95,
+          margin: 0,
+          letterSpacing: 0.5,
+          textAlign: "center",
+          whiteSpace: "nowrap",
+          // Same gradient/animation family as the avatar's own shimmer above, so the two
+          // visually read as shimmering together -- background-clip:text sweeping the
+          // gradient left-to-right on a loop instead of a static fill color.
+          background: "linear-gradient(120deg, #7ee6c4, #ffe36e, #ff9f6e, #ff8fc7, #7ee6c4)",
+          backgroundSize: "300% 100%",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          animation: "shimmerHue 2.2s linear infinite",
+          // text-shadow doesn't render with a transparent fill, but drop-shadow works off
+          // the glyphs' own alpha shape regardless of fill color -- needed for legibility
+          // sitting directly on top of the avatar shimmer.
+          filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.4))",
+        }}
+      >
+        Vacation
+        <br />
+        Loading...
+      </p>
     </div>
   );
 }

@@ -89,15 +89,17 @@ function floodRemoveBackground(data: Uint8ClampedArray, width: number, height: n
 }
 
 /** After floodRemoveBackground clears the connected background, some generated avatars
- *  still have residual pure-white fringing right at the edge of the hair silhouette
+ *  still have residual near-white fringing right at the edge of the hair silhouette
  *  (compositing artifacts from the original background removal that the tolerance-based
- *  pass didn't fully catch). This extends the transparency through any EXACTLY pure-white
- *  (255,255,255, no tolerance) pixel connected to the already-transparent region -- same
- *  border-BFS shape as floodRemoveBackground, just seeded from the transparent/opaque
- *  boundary instead of the image edge. Exact-match-only and connectivity-only (never a
- *  blanket "remove all white pixels" pass) means it can't reach interior pure-white
- *  features like the eyes' own blank sclera or teeth, since neither touches the
- *  already-transparent background. */
+ *  pass didn't fully catch) -- these AI-rendered highlight/fringe pixels are rarely
+ *  EXACTLY 255,255,255, so this uses the same near-white tolerance as the rest of the
+ *  pipeline (isNearWhite) rather than requiring an exact match. This extends the
+ *  transparency through any near-white pixel connected to the already-transparent region
+ *  -- same border-BFS shape as floodRemoveBackground, just seeded from the transparent/
+ *  opaque boundary instead of the image edge. Connectivity-only (never a blanket "remove
+ *  all white pixels" pass) means it can't reach interior near-white features like the
+ *  eyes' own blank sclera or teeth, since neither touches the already-transparent
+ *  background. */
 function maskConnectedPureWhite(data: Uint8ClampedArray, width: number, height: number) {
   const n = width * height;
   const visited = new Uint8Array(n);
@@ -106,7 +108,7 @@ function maskConnectedPureWhite(data: Uint8ClampedArray, width: number, height: 
   let tail = 0;
   const isPureWhite = (idx: number) => {
     const p = idx * 4;
-    return data[p + 3] !== 0 && data[p] === 255 && data[p + 1] === 255 && data[p + 2] === 255;
+    return data[p + 3] !== 0 && isNearWhite([data[p], data[p + 1], data[p + 2]]);
   };
   const tryPush = (idx: number) => {
     if (!visited[idx] && isPureWhite(idx)) {
@@ -337,11 +339,12 @@ function computeFaceZone(eyes: EyeDetection): FaceZone {
 /** maskConnectedPureWhite only ever removes white that's connected to the already-cleared
  *  background, which by construction can't reach a white pocket fully enclosed between
  *  curls/strands of hair -- exactly the kind of leftover fringing that rule was meant to
- *  catch but structurally can't. This is the more aggressive follow-up: strip every EXACT
- *  pure-white (255,255,255, no tolerance) pixel in the whole opaque image, connected or
- *  not, except within `zone` (the face -- see computeFaceZone), which is the only place
- *  pure white is ever legitimate content (sclera, teeth) rather than a compositing
- *  artifact. */
+ *  catch but structurally can't. This is the more aggressive follow-up: strip every
+ *  near-white pixel (isNearWhite -- min channel > 205, max-min spread < 20; real,
+ *  legitimately white, not just "lighter than the dark hair around it") in the whole
+ *  opaque image, connected or not, except within `zone` (the face -- see
+ *  computeFaceZone), which is the only place near-white is ever legitimate content
+ *  (sclera, teeth) rather than a compositing artifact. */
 function maskPureWhiteOutsideZone(data: Uint8ClampedArray, width: number, height: number, zone: FaceZone) {
   const left = zone.cx - zone.halfWidth;
   const right = zone.cx + zone.halfWidth;
@@ -352,7 +355,7 @@ function maskPureWhiteOutsideZone(data: Uint8ClampedArray, width: number, height
     for (let x = 0; x < width; x++) {
       if (inZoneRow && x >= left && x <= right) continue;
       const p = (y * width + x) * 4;
-      if (data[p + 3] !== 0 && data[p] === 255 && data[p + 1] === 255 && data[p + 2] === 255) {
+      if (data[p + 3] !== 0 && isNearWhite([data[p], data[p + 1], data[p + 2]])) {
         data[p + 3] = 0;
       }
     }

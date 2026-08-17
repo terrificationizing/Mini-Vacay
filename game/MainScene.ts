@@ -468,36 +468,6 @@ export class MainScene extends Phaser.Scene {
     this.eyeBaseRight = toWorld(eyeLocal.right.x, eyeLocal.right.y + this.eyePupilCenterYBiasLocal);
     this.scleraCenterLeft = toWorld(eyeLocal.left.x, eyeLocal.left.y);
     this.scleraCenterRight = toWorld(eyeLocal.right.x, eyeLocal.right.y);
-    this.emitAvatarRect();
-  }
-
-  /** Reports the avatar's actual on-screen rect (as viewport percentages) so DOM overlays
-   * outside the canvas -- namely the Preparing screen's shimmer placeholder -- can line up
-   * with exactly where the real avatar renders, instead of an approximated fixed position.
-   * Converts from Phaser's internal reference resolution to real CSS pixels via the
-   * canvas's own bounding rect, since the scale manager may letterbox/scale that
-   * reference resolution differently depending on the actual viewport. */
-  private emitAvatarRect() {
-    // Purely relative to the game's own logical coordinate space (this.scale.width/height,
-    // the same reference this.avatar.x/y already live in) -- NOT the canvas element's own
-    // getBoundingClientRect(). That DOM-measurement approach was tried first but is prone
-    // to a transient mismatch right after a resize (the canvas's actual rendered size and
-    // Phaser's internal scale.width/height can be one tick out of sync), which showed up
-    // as the shimmer overlay briefly appearing shifted/oversized. Emitting a pure fraction
-    // of the game's own logical size instead, and having the DOM consumer position itself
-    // as a percentage within a wrapper sized to exactly match the Phaser canvas (see
-    // GameRoot.tsx), sidesteps that race entirely -- both sides read from the same source
-    // of truth at read-time instead of two separately-updated measurements.
-    const dispW = this.avatar.displayWidth;
-    const dispH = this.avatar.displayHeight;
-    const avatarLeft = this.avatar.x - dispW / 2;
-    const avatarTop = this.avatar.y - dispH;
-    gameEvents.emit("avatar-rect", {
-      xPct: (avatarLeft / this.scale.width) * 100,
-      yPct: (avatarTop / this.scale.height) * 100,
-      widthPct: (dispW / this.scale.width) * 100,
-      heightPct: (dispH / this.scale.height) * 100,
-    });
   }
 
   // Crops the pupil's own texture frame down to whatever vertical slice of it currently

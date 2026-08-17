@@ -80,7 +80,6 @@ export default function GameRoot() {
   const [chosenCandidateUrl, setChosenCandidateUrl] = useState<string | null>(null);
   const [avatarLibrary, setAvatarLibrary] = useState<CreatedAvatarEntry[]>([]);
   const [detectedIrisColor, setDetectedIrisColor] = useState<number | null>(null);
-  const [avatarRect, setAvatarRect] = useState<{ xPct: number; yPct: number; widthPct: number; heightPct: number } | null>(null);
   const [currentAvatarFrownSrc, setCurrentAvatarFrownSrc] = useState<string | null>(null);
   const [currentAvatarEyeYPct, setCurrentAvatarEyeYPct] = useState<number | null>(null);
 
@@ -137,7 +136,6 @@ export default function GameRoot() {
     const offSpeedStage = gameEvents.on("speed-stage", ({ stage }) => {
       musicEngine.setPlaybackRate(stage === 2 ? 1.3 : stage === 1 ? 1.15 : 1);
     });
-    const offAvatarRect = gameEvents.on("avatar-rect", setAvatarRect);
     return () => {
       offState();
       offScore();
@@ -147,7 +145,6 @@ export default function GameRoot() {
       offCatchGood();
       offMiniBonus();
       offSpeedStage();
-      offAvatarRect();
       if (tiltListenerAdded.current) {
         window.removeEventListener("deviceorientation", handleTiltEvent);
       }
@@ -397,15 +394,10 @@ export default function GameRoot() {
         <PhaserGame />
         <CatchPopups />
         <MiniBonusPopup />
-        {/* Rendered here (not as a top-level sibling) so its percentage-based positioning
-            resolves against THIS wrapper -- the same element Phaser's own canvas is sized
-            to fill -- instead of the outer viewport, keeping it exactly in sync with
-            wherever the real avatar renders (see MainScene's emitAvatarRect). */}
         {uiState === "start" && avatarFlow === "preparing" && chosenCandidateUrl && (
           <AvatarPreparingScreen
             smileImageUrl={chosenCandidateUrl}
             irisColor={detectedIrisColor}
-            avatarRect={avatarRect}
             onReady={handlePreparingReady}
             onError={handlePreparingError}
           />

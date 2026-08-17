@@ -13,13 +13,16 @@ export type AvatarProfile = AvatarGeometry & {
 
 export const AVATAR_PROFILES: AvatarProfile[] = [
   {
-    id: "rebecca", displayName: "Rebecca",
-    smileKey: "avatar-rebecca-smile", frownKey: "avatar-rebecca-frown",
-    smileSrc: "/avatars/rebecca-smile.png", frownSrc: "/avatars/rebecca-frown.png",
-    eyeLocal: { left: { x: 144.6, y: 263.0 }, right: { x: 215.0, y: 263.0 } },
-    scleraHeightLocal: 14.0,
-    shoulderLocal: { left: { x: 35.5, y: 473.0 }, right: { x: 324.0, y: 473.0 } },
-    armColor: 0x2f302f, skinColor: 0xe5b89b, irisColor: 0x3f2a17,
+    id: "traci", displayName: "Traci",
+    smileKey: "avatar-traci-smile", frownKey: "avatar-traci-frown",
+    smileSrc: "/avatars/traci-smile.png", frownSrc: "/avatars/traci-frown.png",
+    eyeLocal: { left: { x: 145.0, y: 205.0 }, right: { x: 215.4, y: 204.9 } },
+    scleraHeightLocal: 11.1,
+    shoulderLocal: { left: { x: 8.0, y: 482.0 }, right: { x: 359.5, y: 482.0 } },
+    // Auto-detected iris color came back near-white (glasses-lens reflection interfering
+    // with the sample), so this uses the same green already established for Nichole
+    // instead, per direct confirmation that Traci's eyes are green.
+    armColor: 0xe7a781, skinColor: 0xe9a57e, irisColor: 0x5c7d4f,
   },
   {
     id: "andy", displayName: "Andy",

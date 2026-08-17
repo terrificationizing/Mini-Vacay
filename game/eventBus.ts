@@ -26,11 +26,6 @@ export type GameEvents = {
   "catch-good": { x: number; y: number; points: number; label: string };
   "catch-bad": { x: number; y: number; points: number; label: string };
   "mini-bonus": { count: number };
-  /** The avatar sprite's current on-screen rect, as percentages of the viewport --
-   * recomputed whenever its anchors update (avatar swap, resize). Lets DOM overlays (the
-   * Preparing screen's shimmer placeholder) line up with exactly where the real avatar
-   * will appear, instead of an approximated fixed position. */
-  "avatar-rect": { xPct: number; yPct: number; widthPct: number; heightPct: number };
   /** Fires once a "setAvatar" command has actually finished applying -- for a generated
    * avatar this means its textures (loaded async via addBase64) are in and
    * applyAvatarProfile has run, not just that the command was emitted. "setAvatar" ->

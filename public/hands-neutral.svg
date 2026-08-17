@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 360 360">
   <!-- Neutral (white/gray) base for the hand art, tinted per-avatar at runtime via
-       Phaser's setTint(skinColor) -- multiplicative tint reproduces the target skin
+       Phaser's setTint(skinColor): multiplicative tint reproduces the target skin
        tone exactly on the white .st2 fill, and a proportionally-darkened version of it
        on the .st3 shadow fill (gray chosen to match the original hand-picked
        #e8957c/#5b4745 ratio, ~48% brightness), so no per-avatar SVG recolor is needed. -->
