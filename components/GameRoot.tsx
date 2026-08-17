@@ -193,8 +193,14 @@ export default function GameRoot() {
   }, []);
 
   const restartGame = useCallback(async () => {
-    const mode = await resolveControlMode();
+    // Started BEFORE the await, not after -- resolveControlMode() can await a real
+    // native permission prompt (DeviceOrientationEvent.requestPermission on iOS), and
+    // browsers only allow .play() within the original click's gesture window. Awaiting
+    // first (as this used to) let that window lapse, so music silently failed to start
+    // on the very first play and only worked once the tilt listener was already granted
+    // from a prior attempt (making the await resolve fast enough not to matter).
     musicEngine.start();
+    const mode = await resolveControlMode();
     gameCommands.emit("restart", { controlMode: mode });
   }, [resolveControlMode]);
 
@@ -208,6 +214,10 @@ export default function GameRoot() {
   // spawning right away or shows the tilt tip first.
   const pickAvatarAndPlay = useCallback(
     async (source: AvatarSource) => {
+      // Started before resolveControlMode()'s await, same reasoning as restartGame above --
+      // this is the primary "start playing" path (tapping an avatar grid slot), so it's the
+      // one most likely to be a player's very first music-start attempt of the session.
+      musicEngine.start();
       gameCommands.emit("setAvatar", source);
       if (source.kind === "preloaded") {
         const profile = AVATAR_PROFILES.find((p) => p.id === source.id);
@@ -219,7 +229,6 @@ export default function GameRoot() {
       }
       setAvatarFlow("closed");
       const mode = await resolveControlMode();
-      musicEngine.start();
       gameCommands.emit("revealAvatar", { controlMode: mode });
       beginSpawningOrShowTip(mode);
     },

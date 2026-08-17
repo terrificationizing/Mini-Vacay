@@ -93,16 +93,26 @@ export default function Background() {
           ))}
         </div>
       )}
+      {/* Sized as a percentage of the CONTAINER's own width (via explicit width + objectFit,
+          instead of the image's natural aspect ratio driving width off of height:100%) --
+          on a narrow-but-tall real phone screen, height-driven width alone would render
+          these nearly as wide as the screen itself, which then shoved the old
+          translateX(42%) self-width-relative offset (see plantSwayLeft/Right in
+          globals.css) deep into the middle of the screen instead of staying near the
+          edge. A stable width percentage keeps the bleed-off-screen amount consistent
+          across device sizes. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/plants.svg"
         alt=""
         style={{
           position: "absolute",
-          left: 0,
+          left: "-15%",
           top: 0,
+          width: "45%",
           height: "100%",
-          width: "auto",
+          objectFit: "cover",
+          objectPosition: "right center",
           transformOrigin: "bottom center",
           animation: dancing
             ? `plantDanceLeft ${DANCE_DURATION_MS}ms ease-in-out`
@@ -115,10 +125,12 @@ export default function Background() {
         alt=""
         style={{
           position: "absolute",
-          right: 0,
+          right: "-15%",
           top: 0,
+          width: "45%",
           height: "100%",
-          width: "auto",
+          objectFit: "cover",
+          objectPosition: "left center",
           transformOrigin: "bottom center",
           animation: dancing
             ? `plantDanceRight ${DANCE_DURATION_MS}ms ease-in-out`

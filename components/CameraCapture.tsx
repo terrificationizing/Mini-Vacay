@@ -25,6 +25,11 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
   const [mode, setMode] = useState<Mode>("idle");
   const [stillDataUrl, setStillDataUrl] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Desktop webcams (especially external/USB ones) can take noticeably longer than a
+  // phone's front camera to actually deliver their first frame after getUserMedia
+  // resolves -- capturing before then reads a 0x0 video, producing an unrenderable still.
+  // Gates the Capture button on the stream's `loadeddata` event instead of just on mode.
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -47,19 +52,29 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
 
   useEffect(() => stopStream, [stopStream]);
 
+  // Runs whenever "live" mode is (re-)entered -- covers both the very first camera start
+  // AND retake(), which unmounts the reviewing view's <img> and mounts a brand-new <video>
+  // element that otherwise has no idea a stream already exists. Attaching here, once, in
+  // one place keeps those two paths from drifting out of sync with each other.
+  useEffect(() => {
+    if (mode !== "live") return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    video.play().catch(() => {});
+    video.onloadeddata = () => setVideoReady(true);
+    return () => {
+      video.onloadeddata = null;
+    };
+  }, [mode]);
+
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
       streamRef.current = stream;
+      setVideoReady(false);
       setMode("live");
-      // The <video> element only mounts once mode flips to "live" -- attach the stream
-      // right after that render happens.
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-      });
     } catch {
       setMode("denied");
     }
@@ -67,7 +82,11 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
 
   const takeStill = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
+    // videoWidth/videoHeight are only populated once the stream has actually delivered a
+    // frame -- capturing before then would size the canvas 0x0 and produce an
+    // unrenderable still, so this bails rather than trusting the button's disabled state
+    // alone.
+    if (!video || !video.videoWidth || !video.videoHeight) return;
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -81,6 +100,10 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
 
   const retake = useCallback(() => {
     setStillDataUrl(null);
+    // The remounted <video> element needs its own `loadeddata` before it has real frame
+    // data, even though the underlying stream was already flowing -- same gate as the
+    // initial start, handled by the mode-keyed effect above.
+    setVideoReady(false);
     setMode("live");
   }, []);
 
@@ -115,7 +138,15 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
           <button onClick={retake} style={{ ...buttonStyle, background: "#ffe1ea", color: "#b6567a" }}>
             RETAKE
           </button>
-          <button onClick={keep} style={{ ...buttonStyle, background: "#57beab", color: "#ffffff" }}>
+          <button
+            onClick={keep}
+            style={{
+              ...buttonStyle,
+              background: "linear-gradient(160deg, #ffd23f, #ff9f45)",
+              color: "#8a3a10",
+              boxShadow: "0 3px 0 #c06a1e",
+            }}
+          >
             KEEP
           </button>
         </div>
@@ -129,8 +160,19 @@ export default function CameraCapture({ onPhotoReady }: { onPhotoReady: (dataUrl
         <div style={{ width: 220, height: 220, borderRadius: 20, overflow: "hidden", border: "4px solid #ffffff" }}>
           <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)" }} />
         </div>
-        <button onClick={takeStill} style={{ ...buttonStyle, background: "#ff6f91", color: "#ffffff", fontSize: 16, padding: "12px 26px" }}>
-          📸 Capture
+        <button
+          onClick={takeStill}
+          disabled={!videoReady}
+          style={{
+            ...buttonStyle,
+            background: videoReady ? "#ff6f91" : "#d99cad",
+            color: "#ffffff",
+            fontSize: 16,
+            padding: "12px 26px",
+            cursor: videoReady ? "pointer" : "default",
+          }}
+        >
+          {videoReady ? "📸 Capture" : "Starting camera…"}
         </button>
       </div>
     );
