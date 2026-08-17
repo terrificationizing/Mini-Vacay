@@ -185,8 +185,23 @@ export default function GameOverScreen({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginTop: 22 }}>
-          <button onClick={onRestart} style={{ ...pillButtonStyle, background: "linear-gradient(160deg, #ffd23f, #ff9f45)", color: "#8a3a10", boxShadow: "0 5px 0 #c06a1e", marginTop: 3 }}>
-            Repack Suitcase
+          <button
+            onClick={onRestart}
+            style={{
+              ...pillButtonStyle,
+              background: "linear-gradient(160deg, #ffd23f, #ff9f45)",
+              color: "#8a3a10",
+              boxShadow: "0 5px 0 #c06a1e",
+              marginTop: 3,
+              // Longer than "Repack Suitcase" was -- shrunk and allowed to wrap so it still
+              // fits the narrow pill width instead of overflowing.
+              fontSize: 15,
+              whiteSpace: "normal",
+              lineHeight: 1.15,
+              padding: "11px 18px",
+            }}
+          >
+            Play Again With My Mini Me
           </button>
           <button onClick={onStartOver} style={{ ...pillButtonStyle, background: "linear-gradient(160deg, #ff8fb3, #ff6f91)", color: "#7a1f3a", boxShadow: "0 5px 0 #c23a5c" }}>
             Start Over

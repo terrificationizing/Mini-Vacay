@@ -206,6 +206,12 @@ export default function GameRoot() {
 
   const startOver = useCallback(() => {
     musicEngine.start();
+    // Clears the stale captured selfie/upload from the previous round -- otherwise
+    // PhotoSelectScreen sees a non-null capturedPhotoDataUrl and skips straight to its
+    // "your photo -> Make a Mini Me!" view instead of the picker grid, forcing an
+    // unnecessary regeneration even when the player just wants to keep playing as an
+    // avatar (preloaded or already-created) they can pick without generating anything.
+    setCapturedPhoto(null);
     gameCommands.emit("resetToStart", undefined);
   }, []);
 
@@ -433,6 +439,7 @@ export default function GameRoot() {
         <PhotoSelectScreen
           capturedPhotoDataUrl={capturedPhoto}
           onPhotoReady={setCapturedPhoto}
+          onDiscardPhoto={() => setCapturedPhoto(null)}
           onMakeMiniMe={() => setAvatarFlow("generating")}
           onUsePreloaded={handleUsePreloaded}
           onUseCreated={handleUseCreated}

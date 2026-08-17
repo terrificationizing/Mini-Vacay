@@ -131,6 +131,7 @@ function buildGridSlots(avatarLibrary: CreatedAvatarEntry[]): GridEntry[] {
 export default function PhotoSelectScreen({
   capturedPhotoDataUrl,
   onPhotoReady,
+  onDiscardPhoto,
   onMakeMiniMe,
   onUsePreloaded,
   onUseCreated,
@@ -140,6 +141,10 @@ export default function PhotoSelectScreen({
 }: {
   capturedPhotoDataUrl: string | null;
   onPhotoReady: (dataUrl: string) => void;
+  /** Clears the captured selfie/upload -- without this, once a photo is captured there was
+   *  no way back to the camera/upload buttons or the picker grid short of generating a
+   *  Mini Me, which is a dead end if e.g. the upload itself was the wrong photo. */
+  onDiscardPhoto: () => void;
   onMakeMiniMe: () => void;
   onUsePreloaded: (id: string) => void;
   onUseCreated: (entry: CreatedAvatarEntry) => void;
@@ -232,6 +237,12 @@ export default function PhotoSelectScreen({
               style={{ ...buttonStyle, fontSize: 18, padding: "12px 30px", background: "linear-gradient(160deg, #ffd23f, #ff9f45)", color: "#8a3a10", boxShadow: "0 5px 0 #c06a1e" }}
             >
               Make a Mini Me!
+            </button>
+            <button
+              onClick={onDiscardPhoto}
+              style={{ ...buttonStyle, fontSize: 13, padding: "8px 20px", background: "#ffe1ea", color: "#b6567a" }}
+            >
+              ← Back
             </button>
           </div>
         )}
