@@ -10,13 +10,21 @@ const DANCE_DURATION_MS = 1400;
 // perspective), each twinkling on its own randomized cycle so they don't sync up.
 const POOL_SPARKLES = [
   { left: "12%", top: "45%", size: 10, duration: 3.4, delay: -0.6 },
+  { left: "17%", top: "37%", size: 7, duration: 4.4, delay: -1.4 },
   { left: "22%", top: "40%", size: 8, duration: 4.1, delay: -2.3 },
+  { left: "28%", top: "47%", size: 8, duration: 3.7, delay: -3.1 },
   { left: "33%", top: "49%", size: 11, duration: 3.8, delay: -1.1 },
+  { left: "38%", top: "41%", size: 7, duration: 4.9, delay: -0.4 },
   { left: "42%", top: "38%", size: 9, duration: 4.6, delay: -3.4 },
+  { left: "46%", top: "48%", size: 8, duration: 3.3, delay: -2.6 },
   { left: "50%", top: "46%", size: 12, duration: 3.2, delay: -0.2 },
+  { left: "54%", top: "39%", size: 8, duration: 4.2, delay: -1.9 },
   { left: "58%", top: "40%", size: 8, duration: 4.3, delay: -2.8 },
+  { left: "63%", top: "47%", size: 9, duration: 3.5, delay: -0.7 },
   { left: "68%", top: "48%", size: 10, duration: 3.9, delay: -1.7 },
+  { left: "73%", top: "39%", size: 7, duration: 4.7, delay: -3.6 },
   { left: "78%", top: "42%", size: 9, duration: 4.5, delay: -3.9 },
+  { left: "83%", top: "48%", size: 8, duration: 3.6, delay: -2.1 },
   { left: "87%", top: "46%", size: 8, duration: 3.6, delay: -0.9 },
 ];
 

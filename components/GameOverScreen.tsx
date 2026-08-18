@@ -1,6 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import CandyIcon from "./CandyIcon";
+import EyeOverlay from "./EyeOverlay";
+import { detectEyeOverlayInfo, loadImage, type EyeOverlayInfo } from "@/lib/avatarPipeline";
+
+const DEFAULT_IRIS_COLOR = 0x3f2a17;
+const HIGH_SCORE_THRESHOLD = 1000;
 
 const SUITCASE_FLAT_SIZE = 250;
 const WELL = { left: 0.1, right: 0.906, top: 0.222, bottom: 0.667 };
@@ -78,11 +84,40 @@ function avatarCircleObjectPositionY(eyeYPct: number): number {
   return Math.max(0, Math.min(100, y));
 }
 
+// Maps a raw EyeOverlayInfo (percentages of the source image's own natural dimensions, as
+// returned by detectEyeOverlayInfo) into percentages of the 72x72 avatar circle -- which
+// isn't a plain objectFit:cover crop, it also has an extra `transform: scale(AVATAR_CIRCLE_
+// SCALE)` with transformOrigin "50% 0%" layered on top (see the <img> below). Deriving this:
+// objectFit:cover with this image's aspect ratio (taller than the square box) makes width
+// the binding dimension, so it maps 1:1 to the box width with no horizontal crop, and object
+// Position vertically shifts by the standard (imageYPct*ASPECT_RATIO - (ASPECT_RATIO-1)*Y)
+// amount (the same formula PhotoSelectScreen's grid thumbnails use, which have no extra
+// transform). The additional CSS scale then zooms that already-cropped/positioned result
+// around its own box's top-center point (50%, 0%) -- horizontally that's `50 + (x-50)*scale`,
+// vertically (origin already at 0) that's just `y*scale`. Sclera size scales by the same
+// factor(s) throughout.
+function containerYPct(imageYPct: number, objectPositionY: number): number {
+  return imageYPct * ASPECT_RATIO - (ASPECT_RATIO - 1) * objectPositionY;
+}
+
+function toCircleEyeInfo(raw: EyeOverlayInfo, objectPositionY: number): EyeOverlayInfo {
+  const mapX = (xImagePct: number) => 50 + (xImagePct - 50) * AVATAR_CIRCLE_SCALE;
+  const mapY = (yImagePct: number) => containerYPct(yImagePct, objectPositionY) * AVATAR_CIRCLE_SCALE;
+  return {
+    left: { xPct: mapX(raw.left.xPct), yPct: mapY(raw.left.yPct) },
+    right: { xPct: mapX(raw.right.xPct), yPct: mapY(raw.right.yPct) },
+    scleraWidthPct: raw.scleraWidthPct * AVATAR_CIRCLE_SCALE,
+    scleraHeightPct: raw.scleraHeightPct * ASPECT_RATIO * AVATAR_CIRCLE_SCALE,
+  };
+}
+
 export default function GameOverScreen({
   score,
   candyCount,
   bonusCount,
   avatarFrownSrc,
+  avatarSmileSrc,
+  avatarIrisColor,
   avatarEyeYPct,
   onRestart,
   onStartOver,
@@ -91,6 +126,10 @@ export default function GameOverScreen({
   candyCount: number;
   bonusCount: number;
   avatarFrownSrc: string | null;
+  /** Shown instead of the frown, with a live-look-around iris overlay, once the player
+   *  clears HIGH_SCORE_THRESHOLD -- see the isHighScore branch below. */
+  avatarSmileSrc: string | null;
+  avatarIrisColor: number | null;
   /** The current avatar's eye-line, as a percentage of the shared 720x1100 canvas height --
    *  used to calibrate the avatar circle's crop per-avatar (see avatarCircleObjectPositionY
    *  above). Falls back to Abe's own reference position when unavailable. */
@@ -98,7 +137,33 @@ export default function GameOverScreen({
   onRestart: () => void;
   onStartOver: () => void;
 }) {
+  const isHighScore = score > HIGH_SCORE_THRESHOLD;
   const objectPositionY = avatarCircleObjectPositionY(avatarEyeYPct ?? REFERENCE_EYE_Y_PCT);
+  const avatarSrc = isHighScore ? avatarSmileSrc : avatarFrownSrc;
+
+  const [rawEyeInfo, setRawEyeInfo] = useState<EyeOverlayInfo | null>(null);
+  useEffect(() => {
+    if (!isHighScore || !avatarSmileSrc) {
+      setRawEyeInfo(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const img = await loadImage(avatarSmileSrc);
+        const info = await detectEyeOverlayInfo(img);
+        if (!cancelled) setRawEyeInfo(info);
+      } catch {
+        if (!cancelled) setRawEyeInfo(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHighScore, avatarSmileSrc]);
+
+  const eyeInfo = rawEyeInfo ? toCircleEyeInfo(rawEyeInfo, objectPositionY) : null;
+
   return (
     <div
       style={{
@@ -142,20 +207,23 @@ export default function GameOverScreen({
               background: "#ffe1ea",
             }}
           >
-            {avatarFrownSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarFrownSrc}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: `center ${objectPositionY}%`,
-                  transform: `scale(${AVATAR_CIRCLE_SCALE})`,
-                  transformOrigin: "50% 0%",
-                }}
-              />
+            {avatarSrc ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    objectPosition: `center ${objectPositionY}%`,
+                    transform: `scale(${AVATAR_CIRCLE_SCALE})`,
+                    transformOrigin: "50% 0%",
+                  }}
+                />
+                {isHighScore && eyeInfo && <EyeOverlay info={eyeInfo} irisColor={avatarIrisColor ?? DEFAULT_IRIS_COLOR} />}
+              </>
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
                 🏖️
@@ -164,7 +232,7 @@ export default function GameOverScreen({
           </div>
         </div>
         <h2 style={{ fontFamily: "var(--font-baloo)", fontWeight: 800, color: "#ff6f91", fontSize: 26, margin: "6px 0 2px" }}>
-          Trip Interrupted :/
+          {isHighScore ? "What a Trip! :)" : "Trip Interrupted :/"}
         </h2>
         <p style={{ fontFamily: "var(--font-baloo)", fontWeight: 600, color: "#7a3a55", fontSize: 16, margin: "0 0 0" }}>
           You got <strong style={{ color: "#e8482f" }}>{score}</strong> vacay points

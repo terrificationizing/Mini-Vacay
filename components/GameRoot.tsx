@@ -14,7 +14,7 @@ import StartScreen from "./StartScreen";
 import GameOverScreen from "./GameOverScreen";
 import CatchPopups from "./CatchPopups";
 import MiniBonusPopup from "./MiniBonusPopup";
-import TiltTip from "./TiltTip";
+import TiltPermissionPrompt from "./TiltPermissionPrompt";
 import PhotoSelectScreen from "./PhotoSelectScreen";
 import AvatarGeneratingScreen from "./AvatarGeneratingScreen";
 import AvatarSelectionScreen from "./AvatarSelectionScreen";
@@ -69,10 +69,14 @@ export default function GameRoot() {
   const [highScore, setHighScore] = useState(0);
   const [controlMode, setControlMode] = useState<ControlMode>("drag");
   const [muted, setMuted] = useState(false);
-  const [showTiltTip, setShowTiltTip] = useState(false);
+  const [showTiltPermissionPrompt, setShowTiltPermissionPrompt] = useState(false);
   const tiltListenerAdded = useRef(false);
-  const tiltTipShownRef = useRef(false);
-  const pendingControlModeRef = useRef<ControlMode>("drag");
+  // Whether the player has already made an explicit tilt-vs-drag choice this session (via
+  // TiltPermissionPrompt) or already gone through the native permission prompt once -- once
+  // true, resolveControlMode never asks again, same as the native prompt itself only ever
+  // fires once per session.
+  const tiltChoiceMadeRef = useRef(false);
+  const tiltChoiceResolverRef = useRef<((useTilt: boolean) => void) | null>(null);
 
   const [avatarFlow, setAvatarFlow] = useState<AvatarFlowState>("closed");
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -81,6 +85,8 @@ export default function GameRoot() {
   const [avatarLibrary, setAvatarLibrary] = useState<CreatedAvatarEntry[]>([]);
   const [detectedIrisColor, setDetectedIrisColor] = useState<number | null>(null);
   const [currentAvatarFrownSrc, setCurrentAvatarFrownSrc] = useState<string | null>(null);
+  const [currentAvatarSmileSrc, setCurrentAvatarSmileSrc] = useState<string | null>(null);
+  const [currentAvatarIrisColor, setCurrentAvatarIrisColor] = useState<number | null>(null);
   const [currentAvatarEyeYPct, setCurrentAvatarEyeYPct] = useState<number | null>(null);
 
   useEffect(() => {
@@ -163,11 +169,39 @@ export default function GameRoot() {
     return granted;
   }, [handleTiltEvent]);
 
-  // Resolves the control mode actually usable for this play: requests tilt permission if
-  // needed, falling back (and updating the stored preference) to drag on denial.
+  // Lets the player pick drag controls up front, before ever seeing the native "Allow
+  // Motion & Orientation Access?" prompt -- previously the only way to end up with drag on
+  // a tilt-capable device was to deny that (unexplained, OS-styled) native prompt. Shown at
+  // most once per session; resolves to whichever button the player taps.
+  const askTiltOrDrag = useCallback(() => {
+    return new Promise<boolean>((resolve) => {
+      tiltChoiceResolverRef.current = resolve;
+      setShowTiltPermissionPrompt(true);
+    });
+  }, []);
+
+  const handleTiltPermissionChoice = useCallback((useTilt: boolean) => {
+    setShowTiltPermissionPrompt(false);
+    tiltChoiceMadeRef.current = true;
+    tiltChoiceResolverRef.current?.(useTilt);
+    tiltChoiceResolverRef.current = null;
+  }, []);
+
+  // Resolves the control mode actually usable for this play: asks tilt-vs-drag up front
+  // (once per session) if the player hasn't already chosen, then requests the native tilt
+  // permission if they opted in, falling back (and updating the stored preference) to drag
+  // on denial either way.
   const resolveControlMode = useCallback(async () => {
     let mode = controlMode;
     if (mode === "tilt") {
+      if (!tiltChoiceMadeRef.current) {
+        const useTilt = await askTiltOrDrag();
+        if (!useTilt) {
+          mode = "drag";
+          setControlMode("drag");
+          return mode;
+        }
+      }
       const granted = await ensureTiltListener();
       if (!granted) {
         mode = "drag";
@@ -175,7 +209,7 @@ export default function GameRoot() {
       }
     }
     return mode;
-  }, [controlMode, ensureTiltListener]);
+  }, [controlMode, ensureTiltListener, askTiltOrDrag]);
 
   // A "setAvatar" command's own promise (real for a generated avatar's async texture
   // load, instant for a preloaded one) isn't observable from here -- MainScene emits
@@ -194,18 +228,6 @@ export default function GameRoot() {
       }),
     []
   );
-
-  // Starts item spawning immediately, unless this is the session's first tilt-mode play --
-  // then it shows the one-time "tilt your head" tip instead, and spawning waits for its
-  // dismissal (see TiltTip's onDismiss below).
-  const beginSpawningOrShowTip = useCallback((mode: ControlMode) => {
-    if (mode === "tilt" && !tiltTipShownRef.current) {
-      tiltTipShownRef.current = true;
-      setShowTiltTip(true);
-    } else {
-      gameCommands.emit("beginSpawning", undefined);
-    }
-  }, []);
 
   const restartGame = useCallback(async () => {
     // Started BEFORE the await, not after -- resolveControlMode() can await a real
@@ -251,9 +273,13 @@ export default function GameRoot() {
       if (source.kind === "preloaded") {
         const profile = AVATAR_PROFILES.find((p) => p.id === source.id);
         setCurrentAvatarFrownSrc(profile?.frownSrc ?? null);
+        setCurrentAvatarSmileSrc(profile?.smileSrc ?? null);
+        setCurrentAvatarIrisColor(profile?.irisColor ?? null);
         setCurrentAvatarEyeYPct(profile ? eyeYPctFromLocal(profile.eyeLocal.left.y) : null);
       } else {
         setCurrentAvatarFrownSrc(source.frownDataUrl);
+        setCurrentAvatarSmileSrc(source.smileDataUrl);
+        setCurrentAvatarIrisColor(source.geometry.irisColor);
         setCurrentAvatarEyeYPct(eyeYPctFromLocal(source.geometry.eyeLocal.left.y));
       }
       setAvatarFlow("closed");
@@ -262,9 +288,9 @@ export default function GameRoot() {
       // before revealAvatar can safely fire.
       const [mode] = await Promise.all([resolveControlMode(), avatarReadyPromise]);
       gameCommands.emit("revealAvatar", { controlMode: mode });
-      beginSpawningOrShowTip(mode);
+      gameCommands.emit("beginSpawning", undefined);
     },
-    [resolveControlMode, waitForAvatarReady, beginSpawningOrShowTip]
+    [resolveControlMode, waitForAvatarReady]
   );
 
   const handleUsePreloaded = useCallback((id: string) => pickAvatarAndPlay({ kind: "preloaded", id }), [pickAvatarAndPlay]);
@@ -305,9 +331,10 @@ export default function GameRoot() {
         frownDataUrl: entry.frownDataUrl,
       });
       setCurrentAvatarFrownSrc(entry.frownDataUrl);
+      setCurrentAvatarSmileSrc(entry.smileDataUrl);
+      setCurrentAvatarIrisColor(entry.geometry.irisColor);
       setCurrentAvatarEyeYPct(eyeYPctFromLocal(entry.geometry.eyeLocal.left.y));
       const [mode] = await Promise.all([resolveControlMode(), waitForAvatarReady()]);
-      pendingControlModeRef.current = mode;
       musicEngine.start();
       gameCommands.emit("revealAvatar", { controlMode: mode });
       setAvatarFlow("flourish");
@@ -320,13 +347,8 @@ export default function GameRoot() {
   }, []);
 
   const handleFlourishDone = useCallback(() => {
-    beginSpawningOrShowTip(pendingControlModeRef.current);
-    setAvatarFlow("closed");
-  }, [beginSpawningOrShowTip]);
-
-  const handleTiltTipDismiss = useCallback(() => {
-    setShowTiltTip(false);
     gameCommands.emit("beginSpawning", undefined);
+    setAvatarFlow("closed");
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -507,13 +529,15 @@ export default function GameRoot() {
           state-change event, so by the time this renders, the HUD is already showing at
           0/0 underneath it. */}
       {avatarFlow === "flourish" && <AvatarFlourish onDone={handleFlourishDone} />}
-      {showTiltTip && <TiltTip onDismiss={handleTiltTipDismiss} />}
+      {showTiltPermissionPrompt && <TiltPermissionPrompt onChoice={handleTiltPermissionChoice} />}
       {uiState === "gameover" && (
         <GameOverScreen
           score={score}
           candyCount={candyCount}
           bonusCount={bonusCount}
           avatarFrownSrc={currentAvatarFrownSrc}
+          avatarSmileSrc={currentAvatarSmileSrc}
+          avatarIrisColor={currentAvatarIrisColor}
           avatarEyeYPct={currentAvatarEyeYPct}
           onRestart={restartGame}
           onStartOver={startOver}
